@@ -1,8 +1,12 @@
-var createError = require('http-errors');
-var express = require('express');
-var path = require('path');
+var express      = require('express');
+var path         = require('path');
 var cookieParser = require('cookie-parser');
-var logger = require('morgan');
+var Promise      = require('bluebird');
+var config       = require('config');
+
+var logging      = require('./routes/logging');
+var mysqlLib     = require('./databases/mysql/mysqlLib');
+var urlQueue     = require('./routes/webCrawler/urlQueue');
 
 
 
@@ -12,11 +16,9 @@ var app = express();
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'jade');
 
-app.use(logger('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
-app.use(express.static(path.join(__dirname, 'public')));
 
 
 
@@ -35,5 +37,20 @@ app.use(function(err, req, res, next) {
   res.status(err.status || 500);
   res.render('error');
 });
+
+appStartup();
+
+function appStartup() {
+  Promise.coroutine(function*(){
+    yield mysqlLib.initializeConnectionPool(config.get("databaseSettings.mysql")); // initializing mysql connection
+    yield urlQueue.initiateCrawling();
+
+  })().then((data)=>{
+    logging.trace({event : "appStartup", data : data});
+  },(error) =>{
+    logging.error({event : "appStartup", error : error});
+  });
+
+}
 
 module.exports = app;

@@ -1,0 +1,10 @@
+{
+  "databaseSettings"   : {
+    "mysql" : {
+      "host"    : "localhost",
+      "user"    : "root",
+      "password": "VTff!piHx1%U",
+      "database": "webCrawler"
+    }
+  }
+}
