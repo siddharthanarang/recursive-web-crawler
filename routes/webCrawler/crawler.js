@@ -1,7 +1,5 @@
 var request                     = require('request');
 var cheerio                     = require('cheerio');
-var Promise                     = require('bluebird');
-
 
 var logging                     = require('./../logging');
 var constants                   = require('./constants');
@@ -25,7 +23,6 @@ function requestWebPage(webUrl){
       urlQueue.stopFurtherCrawling();
       return resolve();
     }
-    totalHits++;
 
     if(currentHits >= constants.maxCrawlingConcurrentRequests){
       logging.trace({event : "Current request limit Reached", currentHits : currentHits});
@@ -40,9 +37,12 @@ function requestWebPage(webUrl){
     };
     incrementCurrentHits();
     request(options, function (error, response, body) { // Requesting the particular page
+      decrementCurrentHits();
+      urlQueue.processCrawling(); //  Calling function for the next crawl by this fully utilizing the slots
+
+      totalHits++;
       extractedLinks[webUrl] = true;
       logging.trace({event : "Requested WebPage Result", webUrl : webUrl, error : error});
-      decrementCurrentHits();
       if(error || (response && response.statusCode != 200)){
         logging.error({event : "Requested WebPage Error", statusCode : response && response.statusCode, error : error});
         return resolve();
@@ -55,11 +55,13 @@ function requestWebPage(webUrl){
 
 function incrementCurrentHits(){
   currentHits++;
+  logging.trace({event : "incrementCurrentHits", currentHits : currentHits});
   return;
 }
 
 function decrementCurrentHits(){
   currentHits--;
+  logging.trace({event : "decrementCurrentHits", currentHits : currentHits});
   return;
 }
 
@@ -166,9 +168,8 @@ function storeLink(linkInformation){
    1. Pushing the link in crawlingQueue so that crawler can pick it up from there for crawling. Only that link
    which has already not occurred till now will be put.
 
-   2. Calling processCrawling function to start crawling if crawling has stopped. This case will never 
-   arrive in normal scenario that crawling has stopped. But it will act as fail safe for that corner case when 
-   crawlingQueue has become empty and crawling has stopped.
+   2. Calling processCrawling function when currentHits = 0 that will arrive when crawling queue has become empty 
+   then start it again.
   
    3. Storing the url, count and params in the database
   
@@ -183,7 +184,9 @@ function storeLink(linkInformation){
     extractedLinks[linkInformation.link] =false;
     urlQueue.pushUrlInQueue(linkInformation.link);
   }
-  urlQueue.processCrawling();
+  if(currentHits == 0){
+    urlQueue.processCrawling(); // if crawling stops when crawling queue has become empty then start it again
+  }
   insertLinkInformation(linkInformation);// Keeping it asynchronus as insertion doesn't depend on next crawling
   return;
 }

@@ -25,24 +25,18 @@ has support after that
 
  baseUrl = Contains Base Url of the website, like https://medium.com
  maxCrawlingConcurrentRequests = No of concurrent request at a particular time.
- nextCrawlingInterval = Act as a delay between two batch of concurrent Requests in milli seconds.
  maxRequests =  No of Maximum Request we will be hitting to the baseUrl after that stop crawling.
-
- e.g. maxCrawlingConcurrentRequests = 5, nextCrawlingInterval = 5000, maxRequests =15
- Then 3 batch will be formed each will be hitting 5 webpage request concurrently with a gap of 5 seconds
- between each batch.
 
 #### Variables
 
 crawlingQueue (Array) = Queue which has all the Url which need to be crawled
-isCrawlingRunning (Boolean) =  Variable maintaining current state of crawling
 stopCrawling (Boolean) = Variable to stop the crawling when maxRequests Limit is reached
 totalHits =  Maintaining a record of no of total hits we have consumed
 currentHits = Maintaining a record of no of concurrent hits at a particular time
 
  ```
- 4. This way crawling process will keep on continue in batches (Hit webPages Concurrently in limits so that we don't
- get blocked ) with checking condition of isCrawlingRunning and link exist in crawlingQueue to be crawled,
+ 4. Crawling process will keep on working continuously (Hit webPages Concurrently within limits so that we don't
+ get blocked ) with checking condition whether that has been crawled already or not,
  recursively till the time maxRequests limit is reached.
 
  5. Once webPage is requested all the internal (links which has relative path of the base url like /topic/health)
@@ -60,3 +54,7 @@ currentHits = Maintaining a record of no of concurrent hits at a particular time
 - A complete unique list of parameters associated with this URL -> ***Stored in params column***
 
 ![Image](./public/recursiveWebCrawlerOutput.png )
+
+### Enhancement
+- Instead of taking local variables of crawlingQueue and extractedLinks we can store that data in Redis so that if program
+stops or is restarted it can continue from where it left.
