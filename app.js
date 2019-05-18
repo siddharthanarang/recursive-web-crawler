@@ -1,16 +1,17 @@
-var express      = require('express');
-var path         = require('path');
-var cookieParser = require('cookie-parser');
-var Promise      = require('bluebird');
-var config       = require('config');
+'use strict';
 
-var logging      = require('./routes/logging');
-var mysqlLib     = require('./databases/mysql/mysqlLib');
-var urlQueue     = require('./routes/webCrawler/urlQueue');
+import express      from 'express'
+import path         from 'path';
+import cookieParser from 'cookie-parser';
+import config       from 'config';
+
+import logging      from './routes/logging';
+import mysqlLib     from './databases/mysql/mysqlLib';
+import urlQueue     from './routes/webCrawler/urlQueue';
 
 
 
-var app = express();
+const app = express();
 
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
@@ -19,13 +20,6 @@ app.set('view engine', 'jade');
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
-
-
-
-// catch 404 and forward to error handler
-app.use(function(req, res, next) {
-  next(createError(404));
-});
 
 // error handler
 app.use(function(err, req, res, next) {
@@ -38,19 +32,17 @@ app.use(function(err, req, res, next) {
   res.render('error');
 });
 
+
+
+const appStartup = async () => {
+  try {
+      await mysqlLib.initializeConnectionPool(config.get("databaseSettings.mysql")); // initializing mysql connection
+      await urlQueue.initiateCrawling();
+      logging.trace({event : "appStartup"});
+    }
+  catch(e){
+    logging.error({event : "appStartup", error : e});
+  }
+};
+
 appStartup();
-
-function appStartup() {
-  Promise.coroutine(function*(){
-    yield mysqlLib.initializeConnectionPool(config.get("databaseSettings.mysql")); // initializing mysql connection
-    yield urlQueue.initiateCrawling();
-
-  })().then((data)=>{
-    logging.trace({event : "appStartup", data : data});
-  },(error) =>{
-    logging.error({event : "appStartup", error : error});
-  });
-
-}
-
-module.exports = app;

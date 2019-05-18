@@ -13,7 +13,7 @@ has support after that
 3. Create the Mysql schema with the query present in ` ./databases/mysql/schema.sql `
 4. Finally Run the command.
     ```
-    NODE_ENV=dev node app.js
+    NODE_ENV=dev node -r esm app.js
     ```
 ### Functioning
 1. It starts from app.js `appStartup()` function which initializes mysql connection and calls `initiateCrawling()` function.

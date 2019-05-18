@@ -1,21 +1,22 @@
-var request                     = require('request');
-var cheerio                     = require('cheerio');
+'use strict';
 
-var logging                     = require('./../logging');
-var constants                   = require('./constants');
-var urlQueue                    = require('./urlQueue');
-var dbHandler                   = require('../../databases/mysql/mysqlLib');
+import request   from 'request';
+import cheerio   from 'cheerio';
 
-module.exports.requestWebPage   =  requestWebPage;
+import logging   from './../logging';
+import constants from './constants';
+import urlQueue  from './urlQueue';
+import dbHandler from '../../databases/mysql/mysqlLib';
 
-var maxRequests                 = constants.maxRequests; // Maximum Request we will be hitting to the baseUrl
-var totalHits                   = 0; // Maintaining a record of no of total hits we have consumed
 
-var currentHits                 = 0; // Maintaining a record of no of concurrent hits at a particular time
-var baseUrl                     = constants.baseUrl;
-var extractedLinks              = {};
+const maxRequests               = constants.maxRequests; // Maximum Request we will be hitting to the baseUrl
+let totalHits                   = 0; // Maintaining a record of no of total hits we have consumed
 
-function requestWebPage(webUrl){
+let currentHits                 = 0; // Maintaining a record of no of concurrent hits at a particular time
+const baseUrl                     = constants.baseUrl;
+let extractedLinks              = {};
+
+const requestWebPage = (webUrl) =>{
   return new Promise((resolve, reject) =>{
 
     if(totalHits >= maxRequests){
@@ -30,7 +31,7 @@ function requestWebPage(webUrl){
       return resolve();
     }
 
-    var options = {
+    let options = {
       url : webUrl,
       method : "GET",
       timeout : 10000
@@ -51,69 +52,69 @@ function requestWebPage(webUrl){
       return resolve();
     });
   });
-}
+};
 
-function incrementCurrentHits(){
+const incrementCurrentHits = () => {
   currentHits++;
   logging.trace({event : "incrementCurrentHits", currentHits : currentHits});
   return;
-}
+};
 
-function decrementCurrentHits(){
+const decrementCurrentHits = () => {
   currentHits--;
   logging.trace({event : "decrementCurrentHits", currentHits : currentHits});
   return;
-}
+};
 
-function parseWebPage(pageContent) {
+const parseWebPage = (pageContent) => {
   getLinksFromHtml(pageContent);
   return;
-}
+};
 
-function getLinksFromHtml(pageContent) {
-  var $ = cheerio.load(pageContent);
+const getLinksFromHtml = (pageContent) => {
+  let $ = cheerio.load(pageContent);
   getInternalLinks($);
   getExternalLinks($);
   return;
-}
+};
 
-function getInternalLinks($){ // getting all links which has relative path of the base url like /topic/health
-  var links = $(`a[href^="/"]`); //jquery selector to get all internal hyperlinks
+const getInternalLinks = ($) => { // getting all links which has relative path of the base url like /topic/health
+  let links = $(`a[href^="/"]`); //jquery selector to get all internal hyperlinks
   (links).each(function(i, link){
     if(!link){
       return;
     }
-    var internalLink = $(link).attr('href');
+    let internalLink = $(link).attr('href');
     if(internalLink.indexOf(constants.basePath) == 0){
       link = constants.baseProtocol + internalLink; // attaching baseProtocol to the relative path of the link
     }
     else{
       link = baseUrl + internalLink; // attaching baseUrl to the relative path
     }
-    var segregatedUrl = splitLink(link);
+    let segregatedUrl = splitLink(link);
     logging.trace({event : "segregatedUrl of InternalLinks", link : internalLink, segregatedUrl : segregatedUrl});
     storeLink(segregatedUrl);
   });
   return;
-}
+};
 
-function getExternalLinks($){ // getting all links which has absolute path of the base url like https://medium.com/3minread
-  var links = $(`a[href^="${baseUrl}"]`); //jquery selector to get all external hyperlinks
+const getExternalLinks = ($) => { // getting all links which has absolute path of the base url like https://medium.com/3minread
+  let links = $(`a[href^="${baseUrl}"]`); //jquery selector to get all external hyperlinks
 
   (links).each(function(i, link){
     if(!link){
       return;
     }
-    var externalLink = $(link).attr('href');
+    let externalLink = $(link).attr('href');
     link = externalLink;
-    var segregatedUrl = splitLink(link);
+    let segregatedUrl = splitLink(link);
     logging.trace({event : "segregatedUrl of ExternalLinks", link : externalLink, segregatedUrl : segregatedUrl});
     storeLink(segregatedUrl);
   });
   return;
-}
+};
 
-function splitLink(link){
+const splitLink = (link) => {
 
   // splitting link with url and param 
 
@@ -121,35 +122,35 @@ function splitLink(link){
   if(!link){
     return;
   }
-  var url = link.split('?')[0];
+  let url = link.split('?')[0];
   url = removeForwardSlash(url);
-  var param = getParams(link.split('?')[1]);
+  let param = getParams(link.split('?')[1]);
   param = param ? param : {};
   return {url : url, param : param, link : link};
-}
+};
 
-function removeForwardSlash(url) {
+const removeForwardSlash = (url) => {
   if (url.substr(-1) == "/") {
     url = url.substr(0, url.length - 1);
   }
   return url;
-}
+};
 
-function getParams(param){
+const getParams = (param) => {
   
   // getting all the params present in the link
 
-  var allParams = {};
+  let allParams = {};
 
   if(!param){
     return {};
   }
-  var splitParam = param.split('&');
+  let splitParam = param.split('&');
   if(!splitParam || splitParam.length ==0){
     return {};
   }
-  for(var i=0; i<splitParam.length; i++){
-    var actualParam = splitParam[i].split('=')[0];
+  for(let i=0; i<splitParam.length; i++){
+    let actualParam = splitParam[i].split('=')[0];
 
     if(!actualParam){
       continue;
@@ -159,9 +160,9 @@ function getParams(param){
     }
   }
   return allParams;
-}
+};
 
-function storeLink(linkInformation){
+const storeLink = (linkInformation) => {
   
   /* This function is performing 3 steps
   
@@ -189,18 +190,18 @@ function storeLink(linkInformation){
   }
   insertLinkInformation(linkInformation);// Keeping it asynchronus as insertion doesn't depend on next crawling
   return;
-}
+};
 
-function insertLinkInformation(linkInformation) {
+const insertLinkInformation = (linkInformation) => {
 
   logging.trace({event : "insertLinkInformation", linkInformation : linkInformation});
 
   return new Promise((resolve, reject) => {
-    var sql = ` INSERT INTO tb_url_store(url, url_count, params) 
+    let sql = ` INSERT INTO tb_url_store(url, url_count, params) 
                 VALUES(?, ?, ?) 
                 ON DUPLICATE KEY 
                 UPDATE url_count = url_count + 1, params=JSON_MERGE_PATCH(params, VALUES(params))`;
-    var params = [linkInformation.url, 1,  JSON.stringify(linkInformation.param || {})];
+    let params = [linkInformation.url, 1,  JSON.stringify(linkInformation.param || {})];
     
     dbHandler.mysqlQueryPromise("Inserting Link In DataBase", sql, params).then((result) =>{
       return resolve(result);
@@ -208,4 +209,7 @@ function insertLinkInformation(linkInformation) {
       return reject(error);
     });
   });
-}
+};
+
+export default {requestWebPage};
+
